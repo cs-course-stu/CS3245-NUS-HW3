@@ -4,6 +4,11 @@ import nltk
 import sys
 import getopt
 
+
+# global variable
+phrasal_query = False # operate phrase query
+normalize = False # operate normalize according to the length of doc
+
 def usage():
     print("usage: " + sys.argv[0] + " -i directory-of-documents -d dictionary-file -p postings-file")
 
@@ -31,6 +36,10 @@ for o, a in opts:
         output_file_dictionary = a
     elif o == '-p': # postings file
         output_file_postings = a
+    elif o == '-x':  # operate phrase query
+        phrasal_query = True
+    elif o == '-n':  # operate normalize according to the length of doc
+        normalize = True
     else:
         assert False, "unhandled option"
 
@@ -38,4 +47,5 @@ if input_directory == None or output_file_postings == None or output_file_dictio
     usage()
     sys.exit(2)
 
-build_index(input_directory, output_file_dictionary, output_file_postings)
+build_index(input_directory, output_file_dictionary,
+            output_file_postings, phrasal_query, normalize)
