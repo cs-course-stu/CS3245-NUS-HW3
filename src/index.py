@@ -12,7 +12,7 @@ normalize = False # operate normalize according to the length of doc
 def usage():
     print("usage: " + sys.argv[0] + " -i directory-of-documents -d dictionary-file -p postings-file")
 
-def build_index(in_dir, out_dict, out_postings):
+def build_index(in_dir, out_dict, out_postings, phrasal_query, normalize):
     """
     build index from documents stored in the input directory,
     then output the dictionary file and postings file

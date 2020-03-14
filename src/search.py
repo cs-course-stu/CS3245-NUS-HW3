@@ -12,7 +12,7 @@ normalize = False  # operate normalize according to the length of doc
 def usage():
     print("usage: " + sys.argv[0] + " -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results")
 
-def run_search(dict_file, postings_file, queries_file, results_file):
+def run_search(dict_file, postings_file, queries_file, results_file, phrasal_query, normalize):
     """
     using the given dictionary file and postings file,
     perform searching on the given queries file and output the results to a file
