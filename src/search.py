@@ -4,6 +4,11 @@ import nltk
 import sys
 import getopt
 
+
+# global variable
+phrasal_query = False  # operate phrase query
+normalize = False  # operate normalize according to the length of doc
+
 def usage():
     print("usage: " + sys.argv[0] + " -d dictionary-file -p postings-file -q file-of-queries -o output-file-of-results")
 
@@ -33,6 +38,10 @@ for o, a in opts:
         file_of_queries = a
     elif o == '-o':
         file_of_output = a
+    elif o == '-x':  # operate phrase query
+        phrasal_query = True
+    elif o == '-n':  # operate normalize according to the length of doc
+        normalize = True
     else:
         assert False, "unhandled option"
 
@@ -40,4 +49,4 @@ if dictionary_file == None or postings_file == None or file_of_queries == None o
     usage()
     sys.exit(2)
 
-run_search(dictionary_file, postings_file, file_of_queries, file_of_output)
+run_search(dictionary_file, postings_file, file_of_queries, file_of_output, phrasal_query, normalize)
