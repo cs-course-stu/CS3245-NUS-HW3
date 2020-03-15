@@ -39,20 +39,29 @@ class Searcher:
     """
     def search(self, query):
         # step 1: tokenize the query to get all the terms
+        terms, tokens = self._tokenize(query)
 
         # step 2: get the postings lists of the terms
+        postings_lists = self.indexer(terms)
 
-        # text query:
-        # Step 3: get total relevant docIds
+        # step 3: get the docs that need to rank
+        if not phrasal:
+            # text query
+            # Step 3-1: get total relevant docIds
+            condidate = self._universe(terms)
+        else:
+            # phrasal query
+            # step 3-1: get all the docs that contains all the terms in the query
+            condidate = self._intersection(terms)
 
-        # phrasal query:
-        # step 3-1: get all the docs that contains all the terms in the query
-        # step 3-2: judging every doc whether is contains the phrase
+            # step 3-2: judging every doc whether it contains the phrase
+            pass
 
-        # step 4: pass the docs to the rank function get the result
+        # step 4: pass the condidate docs to the rank function get the result
+        retult = self.rank(query, candidate, postings_lists)
 
         # step 5: return the result
-        pass
+        return result
 
     """ Rank the documents and return the 10 most relevant docIds.
         The result should be in the order of relevant.
@@ -143,7 +152,10 @@ if __name__ == '__main__':
     # Create a Searcher
     searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = True)
 
+    test = '_tokenize'
+
     # Test tokenizing the query string
-    terms, tokens = searcher._tokenize('Searcher can tokenize the query strings into terms and tokens')
-    print(terms)
-    print(tokens)
+    if test == '_tokenize':
+        terms, tokens = searcher._tokenize('Searcher can tokenize query strings into terms and tokens')
+        print(terms)
+        print(tokens)
