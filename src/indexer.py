@@ -225,6 +225,13 @@ class Indexer:
                 # data = np.concatenate([doc_plus_tf, position], axis=1)
                 # postings = np.load(self.file_handle, allow_pickle=True)
                 # pointers = self.skip_pointer_list[len(postings)]
+            else:
+                doc_plus_tf = np.empty(shape=(0, 2), dtype=np.int32)
+                if self.phrasal_query:
+                    position = np.empty(shape=(0, ), dtype=object)
+                    ret[term] = (doc_plus_tf, position)
+                else:
+                    ret[term] = (doc_plus_tf, )
 
         return ret
 
