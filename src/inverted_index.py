@@ -3,18 +3,22 @@ import os
 import sys
 import nltk
 import pickle
+import math
+import time
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 from collections import OrderedDict
 
 
-class InvertedIndex:
+class Indexer:
     dictionary = {}
     """ class InvertedIndex is a class dealing with building index, saving it to file and loading it
 
     Args:
         dictionary_file: the name of the dictionary.
         postings_file: the name of the postings
+        phrasal_query: Boolean varible of phrase query searching
+        normalize: Boolean varible of advanced normaliza according to the ESSAY #2
     """
 
     def __init__(self, dictionary_file, postings_file, phrasal_query, normalize):
@@ -31,9 +35,10 @@ class InvertedIndex:
         test1 = {"term": [[1,2,[3,4]],[5,6,[7,8]]]}
         """
         self.file_handle = None
-        self.average = -1
+        self.average = 0
         self.phrasal_query = phrasal_query
         self.normalize = normalize
+
     """ build index from documents stored in the input directory
 
     Args: 
@@ -50,11 +55,10 @@ class InvertedIndex:
         porter_stemmer = PorterStemmer()
 
         for i, file in enumerate(files):
-            if i > 1:
-                break
+            # if i > 100:
+            #     break
             if not os.path.isdir(file):
                 doc_id = int(file)
-                # print(doc_id)
                 doc_set = set()
                 term_pos = 0
                 self.total_doc.add(doc_id)
@@ -68,7 +72,7 @@ class InvertedIndex:
                         # stemmer.lower
                         clean_token = porter_stemmer.stem(token).lower()
 
-                        if clean_token in self.dictionary: # term exists
+                        if clean_token in self.dictionary:  # term exists
                             if clean_token in doc_set:
                                 self.postings[clean_token][-1][1] += 1
                                 if(self.phrasal_query):
@@ -77,22 +81,32 @@ class InvertedIndex:
                                 # insert position
                             else:
                                 doc_set.add(clean_token)
-                                if(self.phrasal_query): # insert position
-                                    self.postings[clean_token].append([doc_id, 1,[term_pos]])
+                                if(self.phrasal_query):  # insert position
+                                    self.postings[clean_token].append(
+                                        [doc_id, 1, [term_pos]])
                                 else:
-                                    self.postings[clean_token].append([doc_id, 1])
+                                    self.postings[clean_token].append(
+                                        [doc_id, 1])
                         else:
                             doc_set.add(clean_token)
                             self.dictionary[clean_token] = 0
                             if(self.phrasal_query):  # insert position
-                                self.postings[clean_token] = [[doc_id,1,[term_pos]]] #{"term": [[1,2],[5,6]]}
+                                self.postings[clean_token] = [
+                                    [doc_id, 1, [term_pos]]]  # {"term": [[1,2],[5,6]]}
                             else:
-                                self.postings[clean_token] = [[doc_id,1]] #{"term": [[1,2],[5,6]]}
+                                self.postings[clean_token] = [
+                                    [doc_id, 1]]  # {"term": [[1,2],[5,6]]}
                         term_pos += 1
-                if(self.normalize): self.average += term_pos
+                
+                # accumulate the length of doc
+                if(self.normalize):
+                    self.average += term_pos
+
+        # calculate the average length of doc
+        if(self.normalize):
             self.average /= (i+1)
-            print(self.postings)
-            print(int(self.average))
+            # print(self.postings)
+            # print(int(self.average))
 
         # operate skip pointers
         # max_len = len(self.total_doc)
@@ -110,39 +124,51 @@ class InvertedIndex:
         dict_file = open(self.dictionary_file, 'wb+')
         post_file = open(self.postings_file, 'wb+')
         pos = 0
-        # save total skip pointers
-        pickle.dump(self.skip_pointer_list, post_file)
+
+        # save postings to the file
         for key, value in self.postings.items():
-            print(type(self.postings[key][0]))
             # save the offset of dictionary
             pos = post_file.tell()
             self.dictionary[key] = pos
 
-            # sort the posting list
-            tmp = np.sort(
-                np.array(list(self.postings[key][0]), dtype=np.int32))
-            self.postings[key][0] = tmp
+            # print(self.postings[key])
+            tmp = np.array(self.postings[key], dtype=object)
 
-            # save postings
-            np.save(post_file, tmp, allow_pickle=True)
+            # operate each postings
+            for i in range(len(tmp)):
+                # convert tf to 1 + log() format
+                tmp[i][1] = 1 + \
+                    math.log(tmp[i][1], 10)
+
+                # convert position list to the np.array
+                if(self.phrasal_query):
+                    tmp[i][2] = np.array(tmp[i][2])
+
+            # sort the posting list according to he doc_id
+            tmp = tmp[tmp[:, 0].argsort()]
+            # print(tmp)
+
+            # split the total postings into doc_plus_tf and position list
+            doc_plus_tf = tmp[:, 0:2]
+            if(self.phrasal_query):
+                position = np.array(tmp[:, 2])
+            # print(doc_plus_tf)
+            # print(position)
+
+            # save all content to the file
+            np.save(post_file, doc_plus_tf, allow_pickle=True)
+            if(self.phrasal_query):
+                np.save(post_file, position, allow_pickle=True)
+
+        # save average length of doc to the file 0 means null
+        pickle.dump(self.average, dict_file)
 
         # save total_doc and dictionary
         pickle.dump(self.total_doc, dict_file)
         pickle.dump(self.dictionary, dict_file)
+
         print('save to file successfully!')
         return
-
-    """ load skip pointers from file
-
-    Returns:
-        skip_pointer_list: list of all skip pointers
-    """
-
-    def LoadSkippointers(self):
-        if not self.file_handle:
-            self.file_handle = open(self.postings_file, 'rb')
-        self.skip_pointer_list = pickle.load(self.file_handle)
-        return self.skip_pointer_list
 
     """ load dictionary from file
 
@@ -154,65 +180,14 @@ class InvertedIndex:
     def LoadDict(self):
         print('loading dictionary...')
         with open(self.dictionary_file, 'rb') as f:
+            self.average = pickle.load(f)
             self.total_doc = pickle.load(f)
             self.dictionary = pickle.load(f)
 
         self.file_hande = open(self.postings_file, 'rb')
 
         print('load dictionary successfully!')
-        return self.total_doc, self.dictionary
-
-    """ load postings from file
-
-    Args: 
-        term: word to be searched
-
-    Returns:
-        (postings, pointers): doc_id and skip pointers of given term
-    """
-
-    def LoadPostings(self, term):
-        if not self.file_handle:
-            self.file_handle = open(self.postings_file, 'rb')
-        print('loading postings...')
-        self.file_handle.seek(self.dictionary[term])
-        postings = np.load(self.file_handle, allow_pickle=True)
-        pointers = self.skip_pointer_list[len(postings)]
-        print('load postings successfully!')
-        return (postings, pointers)
-
-    """ create skip pointers
-
-    Args: 
-        length: length of postings
-
-    Returns:
-        pointers: array of skip pointers
-    """
-
-    def CreateSkipPointers(self, length):
-        if length <= 1:
-            return np.zeros((0,), dtype=np.int32)
-
-        num = int(np.sqrt(length))
-        strip = int((length - 1) / num)
-        pointers = np.zeros((num + 1, ), dtype=np.int32)
-        for i in range(1, num + 1):
-            pointers[i] = pointers[i - 1] + strip
-        return pointers
-
-    """ get skip pointers based on length
-
-    Args: 
-        length: length of postings
-
-    Returns:
-        pointers: array of skip pointers
-    """
-
-    def GetSkipPointers(self, length):
-        assert 0 <= length <= len(self.total_doc), "length should be legal"
-        return self.skip_pointer_list[length]
+        return self.average, self.total_doc, self.dictionary
 
     """ load multiple postings lists from file
 
@@ -231,28 +206,39 @@ class InvertedIndex:
         for term in terms:
             if term in self.dictionary:
                 self.file_handle.seek(self.dictionary[term])
-                postings = np.load(self.file_handle, allow_pickle=True)
-                pointers = self.skip_pointer_list[len(postings)]
-            else:
-                postings = pointers = self.skip_pointer_list[0]
-            ret[term] = (postings, pointers)
+                # load postings and position
+                doc_plus_tf = np.load(self.file_handle, allow_pickle=True)
+                if(self.phrasal_query):
+                    position = np.load(
+                        self.file_handle, allow_pickle=True).tolist()
+                    ret[term] = (doc_plus_tf, position)
+                else:
+                    ret[term] = (doc_plus_tf, )
+                # for i in range(len(doc_plus_tf)):
+                #     tmp = position[i]
+                #     print(tmp)
+                    # print(np.array([doc_plus_tf[i], position[i]]).tolist())
+                # print(len(doc_plus_tf))
+                # print(position[0])
+                # print(np.array([doc_plus_tf[0], position[0]]))
+
+                # data = np.concatenate([doc_plus_tf, position], axis=1)
+                # postings = np.load(self.file_handle, allow_pickle=True)
+                # pointers = self.skip_pointer_list[len(postings)]
 
         return ret
 
-
 if __name__ == '__main__':
-    # test the example: that
-    inverted_index = InvertedIndex(
-        'dictionary.txt', 'postings.txt', phrasal_query = True, normalize=True)
-    #inverted_index.build_index('../../reuters/training')
-    inverted_index.build_index(
-       '/Users/wangyifan/Google Drive/reuters/training')
-    # inverted_index.SavetoFile()
-    # print("test the example: that")
-    # total_doc, dictionary = inverted_index.LoadDict()
-    # skip_pointers = inverted_index.LoadSkippointers()
+    indexer = Indexer(
+        'dictionary.txt', 'postings.txt', phrasal_query=True, normalize=True)
+    #indexer.build_index('../../reuters/training')
+    start = time.time()
+    indexer.build_index(
+        '/Users/wangyifan/Google Drive/reuters/training')
+    indexer.SavetoFile()
+    end = time.time()
 
-    # (postings, pointers) = inverted_index.LoadPostings('that')
-    # term = ['grower', 'relief']
-    # print(inverted_index.LoadTerms(term))
-    # print(postings)
+    average, total_doc, dictionary = indexer.LoadDict()
+    print(average)
+    terms = ['of']
+    print(indexer.LoadTerms(terms))
