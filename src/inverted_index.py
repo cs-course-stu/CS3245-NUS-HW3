@@ -17,15 +17,23 @@ class InvertedIndex:
         postings_file: the name of the postings
     """
 
-    def __init__(self, dictionary_file, postings_file):
+    def __init__(self, dictionary_file, postings_file, phrasal_query, normalize):
         self.dictionary_file = dictionary_file
         self.postings_file = postings_file
         self.total_doc = set()
         self.dictionary = {}
         self.skip_pointer_list = []
         self.postings = {}
+        """
+        non-position (non -x):
+        test1 = {"term": [[1,2],[5,6]]}
+        position (-x):
+        test1 = {"term": [[1,2,[3,4]],[5,6,[7,8]]]}
+        """
         self.file_handle = None
-
+        self.average = -1
+        self.phrasal_query = phrasal_query
+        self.normalize = normalize
     """ build index from documents stored in the input directory
 
     Args: 
@@ -40,13 +48,15 @@ class InvertedIndex:
             sys.exit(2)
         files = os.listdir(in_dir)
         porter_stemmer = PorterStemmer()
-        stop_words = set(stopwords.words('english'))
 
         for i, file in enumerate(files):
-            if i > 500:
+            if i > 1:
                 break
             if not os.path.isdir(file):
                 doc_id = int(file)
+                # print(doc_id)
+                doc_set = set()
+                term_pos = 0
                 self.total_doc.add(doc_id)
                 f = open(in_dir+"/"+file)
                 for line in iter(f):
@@ -58,16 +68,36 @@ class InvertedIndex:
                         # stemmer.lower
                         clean_token = porter_stemmer.stem(token).lower()
 
-                        if clean_token in self.dictionary:
-                            self.postings[clean_token][0].add(doc_id)
+                        if clean_token in self.dictionary: # term exists
+                            if clean_token in doc_set:
+                                self.postings[clean_token][-1][1] += 1
+                                if(self.phrasal_query):
+                                    self.postings[clean_token][-1][2].append(
+                                        term_pos)
+                                # insert position
+                            else:
+                                doc_set.add(clean_token)
+                                if(self.phrasal_query): # insert position
+                                    self.postings[clean_token].append([doc_id, 1,[term_pos]])
+                                else:
+                                    self.postings[clean_token].append([doc_id, 1])
                         else:
+                            doc_set.add(clean_token)
                             self.dictionary[clean_token] = 0
-                            self.postings[clean_token] = [{doc_id}]
+                            if(self.phrasal_query):  # insert position
+                                self.postings[clean_token] = [[doc_id,1,[term_pos]]] #{"term": [[1,2],[5,6]]}
+                            else:
+                                self.postings[clean_token] = [[doc_id,1]] #{"term": [[1,2],[5,6]]}
+                        term_pos += 1
+                if(self.normalize): self.average += term_pos
+            self.average /= (i+1)
+            print(self.postings)
+            print(int(self.average))
 
         # operate skip pointers
-        max_len = len(self.total_doc)
-        for i in range(max_len+1):
-            self.skip_pointer_list.append(self.CreateSkipPointers(i))
+        # max_len = len(self.total_doc)
+        # for i in range(max_len+1):
+        #     self.skip_pointer_list.append(self.CreateSkipPointers(i))
         print('build index successfully!')
 
     """ save dictionary, postings and skip pointers given fom build_index() to file
@@ -212,16 +242,17 @@ class InvertedIndex:
 
 if __name__ == '__main__':
     # test the example: that
-    inverted_index = InvertedIndex('dictionary.txt', 'postings.txt')
+    inverted_index = InvertedIndex(
+        'dictionary.txt', 'postings.txt', phrasal_query = True, normalize=True)
     #inverted_index.build_index('../../reuters/training')
-    # inverted_index.build_index(
-    #    '/Users/wangyifan/Google Drive/reuters/training')
+    inverted_index.build_index(
+       '/Users/wangyifan/Google Drive/reuters/training')
     # inverted_index.SavetoFile()
-    print("test the example: that")
-    total_doc, dictionary = inverted_index.LoadDict()
-    skip_pointers = inverted_index.LoadSkippointers()
+    # print("test the example: that")
+    # total_doc, dictionary = inverted_index.LoadDict()
+    # skip_pointers = inverted_index.LoadSkippointers()
 
-    (postings, pointers) = inverted_index.LoadPostings('that')
-    term = ['grower', 'relief']
-    print(inverted_index.LoadTerms(term))
-    print(postings)
+    # (postings, pointers) = inverted_index.LoadPostings('that')
+    # term = ['grower', 'relief']
+    # print(inverted_index.LoadTerms(term))
+    # print(postings)
