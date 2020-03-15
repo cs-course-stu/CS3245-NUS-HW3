@@ -2,7 +2,11 @@
 
 import sys
 import math
+import nltk
 import numpy as np
+# from indexer import Indexer
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
 
 class Searcher:
     """ Searcher is a class dealing with real-time querying.
@@ -17,8 +21,13 @@ class Searcher:
     """
 
     def __init__(self, dictionary_file, postings_file, phrasal = False, pivoted = False):
-        pass
+        self.dictionary_file = dictionary_file
+        self.postings_file = postings_file
+        self.phrasal = phrasal
+        self.pivoted = pivoted
 
+        self.stemmer = PorterStemmer()
+        # self.indexer = Indexer(dictionary_file, postings_file, phrasal, pivoted)
 
     """ Search and return docIds according to the boolean expression.
 
@@ -113,7 +122,28 @@ class Searcher:
         query: the query string
 
     Returns:
-        terms: a list contains all the terms appeared in the boolean expression
+        terms: a set contains all the terms appeared in the query string
+        tokens: a list contains all the tokens appeared in the query string
     """
     def _tokenize(self, query):
-        pass
+        # tokenize the query string
+        tokens = [word for sent in nltk.sent_tokenize(query)
+                       for word in nltk.word_tokenize(sent)]
+
+        # stem the tokens
+        tokens = [self.stemmer.stem(token).lower() for token in tokens]
+
+        # get the set of tokens
+        terms = set(tokens)
+        terms = list(terms)
+
+        return terms, tokens
+
+if __name__ == '__main__':
+    # Create a Searcher
+    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = True)
+
+    # Test tokenizing the query string
+    terms, tokens = searcher._tokenize('Searcher can tokenize the query strings into terms and tokens')
+    print(terms)
+    print(tokens)
