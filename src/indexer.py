@@ -232,12 +232,12 @@ if __name__ == '__main__':
     indexer = Indexer(
         'dictionary.txt', 'postings.txt', phrasal_query=True, normalize=True)
     #indexer.build_index('../../reuters/training')
-    start = time.time()
+    # start = time.time()
     indexer.build_index(
         '/Users/wangyifan/Google Drive/reuters/training')
     indexer.SavetoFile()
-    end = time.time()
-    print('execution time: ' + str(end-start) + 's')
+    # end = time.time()
+    # print('execution time: ' + str(end-start) + 's')
     average, total_doc, dictionary = indexer.LoadDict()
     print(average)
     terms = ['of']
