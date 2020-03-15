@@ -48,11 +48,11 @@ class Searcher:
         if not phrasal:
             # text query
             # Step 3-1: get total relevant docIds
-            condidate = self._universe(terms)
+            condidate = self._universe(terms, postings_lists)
         else:
             # phrasal query
             # step 3-1: get all the docs that contains all the terms in the query
-            condidate = self._intersection(terms)
+            condidate = self._intersection(terms, postings_lists)
 
             # step 3-2: judging every doc whether it contains the phrase
             pass
@@ -98,7 +98,15 @@ class Searcher:
         universe: the universe of the docs that appear in one of the lists
     """
     def _get_universe(self, terms, postings_lists):
-        pass
+        universe = set()
+        for term in terms:
+            postings = postings_lists[term][0]
+            length = postings.shape[0]
+            for i in range(0, length):
+                universe.add(postings[i][0])
+
+        universe = list(universe)
+        return universe
 
     """ Get the intersection of docs
 
@@ -150,12 +158,26 @@ class Searcher:
 
 if __name__ == '__main__':
     # Create a Searcher
-    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = True)
+    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = False, pivoted = False)
 
-    test = '_tokenize'
+    terms = ['into', 'queri', 'can', 'term', 'searcher', 'token', 'string', 'and']
+    postings_lists = {
+        'into'    : (np.array([[1, 5], [3, 6], [5, 1]]), ),
+        'queri'   : (np.array([[0, 5]]), ),
+        'can'     : (np.array([[7, 10], [9, 3]]), ),
+        'term'    : (np.array([[2, 5], [4, 6], [6, 10]]), ),
+        'searcher': (np.array([[8, 3]]), ),
+        'token'   : (np.array([[1, 7], [4, 6], [7, 3]]), ),
+        'string'  : (np.array([[2, 5], [5, 6], [8, 1]]), ),
+        'and'     : (np.array([[3, 3], [6, 6], [9, 9]]), )
+    }
 
+    test = '_get_universe'
     # Test tokenizing the query string
     if test == '_tokenize':
         terms, tokens = searcher._tokenize('Searcher can tokenize query strings into terms and tokens')
         print(terms)
         print(tokens)
+    elif test == '_get_universe':
+        universe = searcher._get_universe(terms, postings_lists)
+        print(universe)
