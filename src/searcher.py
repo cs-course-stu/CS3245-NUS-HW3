@@ -5,8 +5,9 @@ import math
 import nltk
 import array
 import numpy as np
-# from indexer import Indexer
+from indexer import Indexer
 from nltk.corpus import stopwords
+from collections import defaultdict
 from nltk.stem.porter import PorterStemmer
 
 class Searcher:
@@ -17,18 +18,23 @@ class Searcher:
     Args:
         dictionary_file: the file path of the dictionary
         postings_file: the file path of the postings
+        topK: the number of highest-scoring documents to be returned
         phrasal: boolean indicator for dealing queries as phrasal queries
         pivoted: boolean indicator for using pivoted normalized document length
     """
 
-    def __init__(self, dictionary_file, postings_file, phrasal = False, pivoted = False):
+    def __init__(self, dictionary_file, postings_file,
+                 topK = 10, phrasal = False, pivoted = False):
         self.dictionary_file = dictionary_file
         self.postings_file = postings_file
+        self.topK = topK
         self.phrasal = phrasal
         self.pivoted = pivoted
 
         self.stemmer = PorterStemmer()
-        # self.indexer = Indexer(dictionary_file, postings_file, phrasal, pivoted)
+        self.indexer = Indexer(dictionary_file, postings_file, phrasal, pivoted)
+        self.average, self.total_doc, self.dictionary = self.indexer.LoadDict()
+        # self.scorer = Scorer(self.average, pivoted)
 
     """ Search and return docIds according to the boolean expression.
 
@@ -43,56 +49,95 @@ class Searcher:
         terms, tokens = self._tokenize(query)
 
         # step 2: get the postings lists of the terms
-        postings_lists = self.indexer(terms)
+        postings_lists = self.indexer.LoadTerms(terms)
 
         # step 3: get the docs that need to rank
         if not phrasal:
             # text query
             # Step 3-1: get total relevant docIds
-            condidate = self._universe(terms, postings_lists)
-        else:
-            # phrasal query
-            # step 3-1: get all the docs that contains all the terms in the query
-            condidate = self._intersection(terms, postings_lists)
+            condidate = self._get_universe(terms, postings_lists)
 
             # step 3-2: judging every doc whether it contains the phrase
             pass
 
-        # step 4: pass the condidate docs to the rank function get the result
-        retult = self.rank(query, candidate, postings_lists)
+        else:
+            # phrasal query
+            # step 3-1: get all the docs that contains all the terms in the query
+            condidate = self._get_intersection(terms, postings_lists)
 
-        # step 5: return the result
+        # step 4: construct the query vector
+        query_vector = self._get_query_vector(terms, postings_lists)
+
+        # step 5: pass the condidate docs to the rank function get the result
+        retult = self.rank(query_vector, candidate, postings_lists)
+
+        # step 6: return the result
         return result
 
     """ Rank the documents and return the 10 most relevant docIds.
         The result should be in the order of relevant.
 
     Args:
-       terms: all terms in the query string
+       query_vector: the constructed query vector
        doc_list: the list of candidate docs
        postings_lists: the dictionary with terms to posting lists mapping
 
     Returns:
        result: the list of 10 most relevant docIds in response to the query
     """
-    def rank(self, query, doc_list, postings_lists):
+    def rank(self, query_vector, doc_list, postings_lists):
         # step 1: initialze the max-heap
+        heap = []
 
-        # step 2: construct and normalize the query vector
+        # step 2: processing every document
+        for doc in doc_list:
+            # step 2-1: construct document vector based on the weights
+            doc_vector = self._get_doc_vector(doc, postings_lists)
 
-        # step 3: construct document vector based on the weights
+            # step 2-2: use Scoreer to evaluate the document
+            # score = self.scorer.evaluate(query_vector, doc_vector)
+            score = 0
 
-        # step 4: use Scorer to evaluate the document
+            # step 2-3: add the document to the heap
+            if len(heap) < self.topK:
+                heapq.heappush(heap, (score, doc))
+            else:
+                heapq.heappushpop(heap, (score, doc))
 
-        # step 5: add the document to the heap
+        # step 3: get the topK docs from the heap
+        heap = heapq.nhighest(topK, heap)
 
-        # step 6: return doc
+        # step 4: return the topK docs
+        return heap
+
+    """ Get the query vector based on the postings_lists
+
+    Args:
+        terms: a dict contains all the terms and their number of occurrences
+        postings_lists: the dictionary with terms to posting lists mapping
+
+    Returns:
+        query_vector: the query vector based on VSM
+    """
+    def _get_query_vector(self, terms, postings_lists):
+        pass
+
+    """ Get the document vector based on the postings_lists
+
+    Args:
+        doc: the doc id where the document vector needs to be calculate
+        postings_lists: the dictionary with terms to posting lists mapping
+
+    Returns:
+        doc_vector: the document vector based on VSM
+    """
+    def _get_doc_vector(self, doc, postings_lists):
         pass
 
     """ Get the universe of the docs that appear in one of the lists.
 
     Args:
-        terms: all terms in the query string
+        terms: a dict contains all the terms and their number of occurrences
         postings_lists: the dictionary with terms to posting lists mapping
 
     Returns:
@@ -112,7 +157,7 @@ class Searcher:
     """ Get the intersection of docs
 
     Args:
-        terms: all terms in the query string
+        terms: a dict contains all the terms and their number of occurrences
         postings_lists: the dictionary with terms to posting lists mapping
 
     Returns:
@@ -175,7 +220,7 @@ class Searcher:
         query: the query string
 
     Returns:
-        terms: a set contains all the terms appeared in the query string
+        terms: a dict contains all the terms and their number of occurrences
         tokens: a list contains all the tokens appeared in the query string
     """
     def _tokenize(self, query):
@@ -186,9 +231,10 @@ class Searcher:
         # stem the tokens
         tokens = [self.stemmer.stem(token).lower() for token in tokens]
 
-        # get the set of tokens
-        terms = set(tokens)
-        terms = list(terms)
+        # get the dict of tokens
+        terms = defaultdict(lambda: 0)
+        for token in tokens:
+            terms[token] += 1
 
         return terms, tokens
 
