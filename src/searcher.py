@@ -3,6 +3,7 @@
 import sys
 import math
 import nltk
+import array
 import numpy as np
 # from indexer import Indexer
 from nltk.corpus import stopwords
@@ -117,8 +118,43 @@ class Searcher:
     Returns:
         intersection: the intersection of postings lists
     """
-    def _get_intersection(self):
-        pass
+    def _get_intersection(self, terms, postings_lists):
+        # optimize the order of the merge
+        costs = []
+        for term in terms:
+            postings = postings_lists[term][0]
+            costs.append((term, postings.shape[0]))
+
+        costs.sort(key = lambda key: key[1])
+
+        # perform pairwise merge
+        result = postings_lists[costs[0][0]][0][:,0]
+        for i in range(1, len(costs)):
+            term = costs[i][0]
+            postings = postings_lists[term][0]
+
+            p1 = p2 = 0
+            len1, len2 = len(result), len(postings)
+            temp = array.array('i')
+
+            while p1 < len1 and p2 < len2:
+                doc1 = result[p1]
+                doc2 = postings[p2][0]
+
+                if doc1 == doc2:
+                    temp.append(doc1)
+                    p1, p2 = p1+1, p2+1
+                elif doc1 < doc2:
+                    p1 += 1
+                else:
+                    p2 += 1
+
+            result = temp
+
+        # return the intersection
+        result = list(result)
+
+        return result
 
     """ Merge the two sets passed in based on the op type.
 
@@ -162,17 +198,17 @@ if __name__ == '__main__':
 
     terms = ['into', 'queri', 'can', 'term', 'searcher', 'token', 'string', 'and']
     postings_lists = {
-        'into'    : (np.array([[1, 5], [3, 6], [5, 1]]), ),
+        'into'    : (np.array([[0, 1], [1, 5], [3, 6], [5, 1]]), ),
         'queri'   : (np.array([[0, 5]]), ),
-        'can'     : (np.array([[7, 10], [9, 3]]), ),
-        'term'    : (np.array([[2, 5], [4, 6], [6, 10]]), ),
-        'searcher': (np.array([[8, 3]]), ),
-        'token'   : (np.array([[1, 7], [4, 6], [7, 3]]), ),
-        'string'  : (np.array([[2, 5], [5, 6], [8, 1]]), ),
-        'and'     : (np.array([[3, 3], [6, 6], [9, 9]]), )
+        'can'     : (np.array([[0, 1], [7, 10], [9, 3]]), ),
+        'term'    : (np.array([[0, 1], [2, 5], [4, 6], [6, 10]]), ),
+        'searcher': (np.array([[0, 1], [8, 3]]), ),
+        'token'   : (np.array([[0, 1], [1, 7], [4, 6], [7, 3]]), ),
+        'string'  : (np.array([[0, 1], [2, 5], [5, 6], [8, 1]]), ),
+        'and'     : (np.array([[0, 1], [6, 6], [9, 9]]), )
     }
 
-    test = '_get_universe'
+    test = '_get_intersection'
     # Test tokenizing the query string
     if test == '_tokenize':
         terms, tokens = searcher._tokenize('Searcher can tokenize query strings into terms and tokens')
@@ -181,3 +217,6 @@ if __name__ == '__main__':
     elif test == '_get_universe':
         universe = searcher._get_universe(terms, postings_lists)
         print(universe)
+    elif test == '_get_intersection':
+        intersection = searcher._get_intersection(terms, postings_lists)
+        print(intersection)
