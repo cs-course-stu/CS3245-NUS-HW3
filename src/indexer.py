@@ -149,7 +149,7 @@ class Indexer:
             # print(tmp)
 
             # split the total postings into doc_plus_tf and position list
-            doc_plus_tf = tmp[:, 0:2]
+            doc_plus_tf = np.array(tmp[:, 0:2], dtype= np.int32)
             if(self.phrasal_query):
                 position = np.array(tmp[:, 2])
             # print(doc_plus_tf)
