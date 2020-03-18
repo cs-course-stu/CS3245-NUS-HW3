@@ -137,8 +137,8 @@ class Indexer:
             # operate each postings
             for i in range(len(tmp)):
                 # convert tf to 1 + log() format
-                tmp[i][1] = 1 + \
-                    math.log(tmp[i][1], 10)
+                # tmp[i][1] = 1 + \
+                #     math.log(tmp[i][1], 10)
 
                 # convert position list to the np.array
                 if(self.phrasal_query):
