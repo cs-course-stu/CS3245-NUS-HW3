@@ -61,11 +61,7 @@ class Searcher:
             candidate = self._judge(candidate, tokens, postings_lists)
             pass
         else:
-            """
             # text query
-            # Step 3-1: get total relevant docIds
-            candidate = self._get_universe(terms, postings_lists)
-            """
             candidate = []
 
         # step 4: pass the condidate docs to the rank function get the result
@@ -98,9 +94,12 @@ class Searcher:
             postings = postings_lists[term][0]
             for j in range(0, len(postings)):
                 doc = postings[j][0]
-                if len(doc_list) and doc in doc_list:
-                    weight = postings[j][1]
-                    scores[doc] += weight * query_vector[i]
+
+                if self.phrasal and (doc not in doc_list):
+                    continue
+
+                weight = postings[j][1]
+                scores[doc] += weight * query_vector[i]
 
         # step 4: get the topK docs from the heap
         heap = [(scores[doc], doc) for doc in scores]
@@ -139,18 +138,6 @@ class Searcher:
             query_vector[i] /= length
 
         return query_vector
-
-    """ Get the document vector based on the postings_lists
-
-    Args:
-        doc: the doc id where the document vector needs to be calculate
-        postings_lists: the dictionary with terms to posting lists mapping
-
-    Returns:
-        doc_vector: the document vector based on VSM
-    """
-    def _get_doc_vector(self, doc, postings_lists):
-        pass
 
     """ Get the universe of the docs that appear in one of the lists.
 
@@ -219,19 +206,6 @@ class Searcher:
 
         return result
 
-    """ Merge the two sets passed in based on the op type.
-
-    Args:
-        op: the type of merging operation
-        set1: the set on the left hand side to be merged
-        set2: the set on the right hand side to be merged
-
-    Returns:
-        resutlt: the merged result
-    """
-    def _merge(self, ):
-        pass
-
     """ Judging whether candidate documents contain the phrase
 
     Args:
@@ -249,6 +223,7 @@ class Searcher:
         positions = defaultdict(lambda: [])
         candidate = set(candidate)
 
+        # get postions for docs
         for i, token in enumerate(tokens):
             postings_list = postings_lists[token]
             postings = postings_list[0]
@@ -258,6 +233,7 @@ class Searcher:
                 if docId in candidate:
                     positions[docId].append(postings_list[1][j])
 
+        # judging every doc
         ans = []
         for doc in positions:
             position = positions[doc]
@@ -337,7 +313,7 @@ class Searcher:
 
 if __name__ == '__main__':
     # Create a Searcher
-    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = False)
+    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = False, pivoted = False)
 
     query = 'Searcher can tokenize query strings into terms and tokens'
     terms = ['searcher', 'can', 'token', 'queri', 'string', 'into', 'term', 'and']
