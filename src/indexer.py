@@ -75,17 +75,17 @@ class Indexer:
                         if clean_token in self.dictionary:  # term exists
                             if clean_token in doc_set:
                                 self.postings[clean_token][-1][1] += 1
-                                
+
                                 # insert position
                                 if(self.phrasal_query):
                                     self.postings[clean_token][-1][2].append(
                                         term_pos)
-                                
+
                             else:
                                 doc_set.add(clean_token)
 
                                 # insert position
-                                if(self.phrasal_query):  
+                                if(self.phrasal_query):
                                     self.postings[clean_token].append(
                                         [doc_id, 1, [term_pos]])
                                 else:
@@ -96,7 +96,7 @@ class Indexer:
                             self.dictionary[clean_token] = 0
 
                             # insert position
-                            if(self.phrasal_query):  
+                            if(self.phrasal_query):
                                 self.postings[clean_token] = [
                                     [doc_id, 1, [term_pos]]]  # {"term": [[1,2],[5,6]]}
                             else:
@@ -110,7 +110,9 @@ class Indexer:
                 # calculate weight of each term
                 length = 0
                 for token in doc_set:
-                    length += np.square(1 + math.log(self.postings[token][-1][1], 10))  # tf of each term
+                    # tf of each term
+                    length += np.square(1 +
+                                        math.log(self.postings[token][-1][1], 10))
 
                 # sqart the length and assign it to doc
                 self.total_doc[doc_id] = np.sqrt(length)
@@ -156,7 +158,7 @@ class Indexer:
             # print(tmp)
 
             # split the total postings into doc_plus_tf and position list
-            doc_plus_tf = np.array(tmp[:, 0:2], dtype= np.int32)
+            doc_plus_tf = np.array(tmp[:, 0:2], dtype=np.int32)
             if(self.phrasal_query):
                 position = np.array(tmp[:, 2])
             # print(doc_plus_tf)
