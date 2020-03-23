@@ -24,7 +24,7 @@ class Indexer:
     def __init__(self, dictionary_file, postings_file, phrasal_query, normalize):
         self.dictionary_file = dictionary_file
         self.postings_file = postings_file
-        self.total_doc = set()
+        self.total_doc = {}
         self.dictionary = {}
         self.skip_pointer_list = []
         self.postings = {}
@@ -61,7 +61,7 @@ class Indexer:
                 doc_id = int(file)
                 doc_set = set()
                 term_pos = 0
-                self.total_doc.add(doc_id)
+                self.total_doc[doc_id] = 0
                 f = open(in_dir+"/"+file)
                 for line in iter(f):
                     # tokenize
@@ -75,13 +75,17 @@ class Indexer:
                         if clean_token in self.dictionary:  # term exists
                             if clean_token in doc_set:
                                 self.postings[clean_token][-1][1] += 1
+                                
+                                # insert position
                                 if(self.phrasal_query):
                                     self.postings[clean_token][-1][2].append(
                                         term_pos)
-                                # insert position
+                                
                             else:
                                 doc_set.add(clean_token)
-                                if(self.phrasal_query):  # insert position
+
+                                # insert position
+                                if(self.phrasal_query):  
                                     self.postings[clean_token].append(
                                         [doc_id, 1, [term_pos]])
                                 else:
@@ -90,28 +94,31 @@ class Indexer:
                         else:
                             doc_set.add(clean_token)
                             self.dictionary[clean_token] = 0
-                            if(self.phrasal_query):  # insert position
+
+                            # insert position
+                            if(self.phrasal_query):  
                                 self.postings[clean_token] = [
                                     [doc_id, 1, [term_pos]]]  # {"term": [[1,2],[5,6]]}
                             else:
                                 self.postings[clean_token] = [
                                     [doc_id, 1]]  # {"term": [[1,2],[5,6]]}
                         term_pos += 1
-                
                 # accumulate the length of doc
                 if(self.normalize):
                     self.average += term_pos
 
+                # calculate weight of each term
+                length = 0
+                for token in doc_set:
+                    length += np.square(1 + math.log(self.postings[token][-1][1], 10))  # tf of each term
+
+                # sqart the length and assign it to doc
+                self.total_doc[doc_id] = np.sqrt(length)
+
         # calculate the average length of doc
         if(self.normalize):
             self.average /= (i+1)
-            # print(self.postings)
-            # print(int(self.average))
 
-        # operate skip pointers
-        # max_len = len(self.total_doc)
-        # for i in range(max_len+1):
-        #     self.skip_pointer_list.append(self.CreateSkipPointers(i))
         print('build index successfully!')
 
     """ save dictionary, postings and skip pointers given fom build_index() to file
@@ -246,6 +253,5 @@ if __name__ == '__main__':
     # end = time.time()
     # print('execution time: ' + str(end-start) + 's')
     average, total_doc, dictionary = indexer.LoadDict()
-    print(average)
     terms = ['of']
     print(indexer.LoadTerms(terms))
