@@ -58,6 +58,7 @@ class Searcher:
             candidate = self._get_intersection(terms, postings_lists)
 
             # step 3-2: judging every doc whether it contains the phrase
+            candidate = self._judge(candidate, tokens, postings_lists)
             pass
         else:
             """
@@ -97,8 +98,9 @@ class Searcher:
             postings = postings_lists[term][0]
             for j in range(0, len(postings)):
                 doc = postings[j][0]
-                weight = postings[j][1]
-                scores[doc] += weight * query_vector[i]
+                if len(doc_list) and doc in doc_list:
+                    weight = postings[j][1]
+                    scores[doc] += weight * query_vector[i]
 
         # step 4: get the topK docs from the heap
         heap = [(scores[doc], doc) for doc in scores]
@@ -204,7 +206,7 @@ class Searcher:
 
                 if doc1 == doc2:
                     temp.append(doc1)
-                    p1, p2 = p1+1, p2+1
+                    p1, p2 = p1 + 1, p2 + 1
                 elif doc1 < doc2:
                     p1 += 1
                 else:
@@ -229,6 +231,77 @@ class Searcher:
     """
     def _merge(self, ):
         pass
+
+    """ Judging whether candidate documents contain the phrase
+
+    Args:
+        candidate: candidate documents to be ranked
+        tokens: a list contains all the tokens appeared in the query string
+        postings_lists: the dictionary with terms to posting lists mapping
+
+    Returns:
+        ans: the final candidate documents
+    """
+    def _judge(self, candidate, tokens, postings_lists):
+        if len(tokens) <= 1:
+            return candidate
+
+        positions = defaultdict(lambda: [])
+        candidate = set(candidate)
+
+        for i, token in enumerate(tokens):
+            postings_list = postings_lists[token]
+            postings = postings_list[0]
+            length = postings.shape[0]
+            for j in range(0, length):
+                docId = postings[j][0]
+                if docId in candidate:
+                    positions[docId].append(postings_list[1][j])
+
+        ans = []
+        for doc in positions:
+            position = positions[doc]
+            pointers = [0] * len(position)
+
+            index = 1
+            flag = False
+            prev_pos = position[0][0]
+            while True:
+                pointer = pointers[index]
+                length = len(position[index])
+
+                while pointer + 1 < length:
+                    tmp = position[index][pointer + 1]
+                    if tmp <= prev_pos + 1:
+                        pointer += 1
+                    else:
+                        break
+
+                pointers[index] = pointer
+                cur_pos = position[index][pointer]
+
+                if cur_pos != prev_pos + 1:
+                    index -= 1
+                    pointers[index] += 1
+                    if pointers[index] >= len(position[index]):
+                        break
+                    if index == 0:
+                        index += 1
+
+                    pointer = pointers[index - 1]
+                    prev_pos = position[index - 1][pointer]
+                    continue
+                else:
+                    prev_pos = cur_pos
+                    index += 1
+                    if index >= len(position):
+                        flag = True
+                        break
+
+            if flag:
+                ans.append(doc)
+
+        return ans
 
     """ Tokenize the query into single term.
 
@@ -264,26 +337,27 @@ class Searcher:
 
 if __name__ == '__main__':
     # Create a Searcher
-    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = False, pivoted = False)
+    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = False)
 
+    query = 'Searcher can tokenize query strings into terms and tokens'
     terms = ['searcher', 'can', 'token', 'queri', 'string', 'into', 'term', 'and']
     counts = [1, 1, 2, 1, 1, 1, 1, 1]
     postings_lists = {
-        'into'    : (np.array([[0, 1], [1, 5], [3, 6], [5, 1]]), ),
-        'queri'   : (np.array([[0, 5]]), ),
-        'can'     : (np.array([[0, 1], [7, 10], [9, 3]]), ),
-        'term'    : (np.array([[0, 1], [2, 5], [4, 6], [6, 10]]), ),
-        'searcher': (np.array([[0, 1], [8, 3]]), ),
-        'token'   : (np.array([[0, 1], [1, 7], [4, 6], [7, 3]]), ),
-        'string'  : (np.array([[0, 1], [2, 5], [5, 6], [8, 1]]), ),
-        'and'     : (np.array([[0, 1], [6, 6], [9, 9]]), )
+        'into'    : (np.array([[0, 1], [1, 5], [3, 6], [5, 1]]), [np.array([5, ])]),
+        'queri'   : (np.array([[0, 5]])                        , [np.array([3, ])]),
+        'can'     : (np.array([[0, 1], [7, 10], [9, 3]])       , [np.array([1, ])]),
+        'term'    : (np.array([[0, 1], [2, 5], [4, 6], [6, 10]]),[np.array([6, ])]),
+        'searcher': (np.array([[0, 1], [8, 3]])                , [np.array([0, ])]),
+        'token'   : (np.array([[0, 1], [1, 7], [4, 6], [7, 3]]), [np.array([2, 8])]),
+        'string'  : (np.array([[0, 1], [2, 5], [5, 6], [8, 1]]), [np.array([4, ])]),
+        'and'     : (np.array([[0, 1], [6, 6], [9, 9]]),         [np.array([7, ])])
     }
 
     test = 'search'
 
     # Tests
     if test == '_tokenize':
-        terms, counts, tokens = searcher._tokenize('Searcher can tokenize query strings into terms and tokens')
+        terms, counts, tokens = searcher._tokenize(query)
         print(terms)
         print(counts)
         print(tokens)
@@ -297,5 +371,9 @@ if __name__ == '__main__':
         query_vector = searcher._get_query_vector(terms, counts, postings_lists)
         print(query_vector)
     elif test == 'search':
-        result = searcher.search('Searcher can tokenize query strings into terms and tokens')
+        result = searcher.search('share in quarter and')
+        print(result)
+    elif test == '_judge':
+        terms.append('token')
+        result = searcher._judge([0], terms, postings_lists)
         print(result)
