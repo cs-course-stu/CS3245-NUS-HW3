@@ -110,9 +110,10 @@ class Indexer:
                 # calculate weight of each term
                 length = 0
                 for token in doc_set:
-                    # tf of each term
-                    length += np.square(1 +
-                                        math.log(self.postings[token][-1][1], 10))
+                    # convert raw tf into 1+log(tf)
+                    self.postings[token][-1][1] = 1 + math.log(self.postings[token][-1][1], 10)
+
+                    length += np.square(self.postings[token][-1][1])
 
                 # sqart the length and assign it to doc
                 self.total_doc[doc_id] = np.sqrt(length)
@@ -163,9 +164,9 @@ class Indexer:
             tf = np.array(tmp[:, 1], dtype=np.float32)
 
             # convert raw tf into 1+log(tf)
-            for i in range(len(tf)):
-                tf[i] = 1 + \
-                    math.log(tf[i], 10)
+            # for i in range(len(tf)):
+            #     tf[i] = 1 + \
+            #         math.log(tf[i], 10)
 
             if(self.phrasal_query):
                 position = np.array(tmp[:, 2])
