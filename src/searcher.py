@@ -91,15 +91,20 @@ class Searcher:
 
         # step 3: processing every document and every term
         for i, term in enumerate(terms):
-            postings = postings_lists[term][0]
+            postings_list = postings_lists[term]
+            postings = postings_list[0]
+            weights = postings_list[1]
             for j in range(0, len(postings)):
-                doc = postings[j][0]
+                doc = postings[j]
 
                 if self.phrasal and (doc not in doc_list):
                     continue
 
-                weight = postings[j][1]
+                weight = weights[j]
                 scores[doc] += weight * query_vector[i]
+
+        for doc in scores:
+            scores[doc] /= self.total_doc[doc]
 
         # step 4: get the topK docs from the heap
         heap = [(scores[doc], doc) for doc in scores]
@@ -152,9 +157,9 @@ class Searcher:
         universe = set()
         for term in terms:
             postings = postings_lists[term][0]
-            length = postings.shape[0]
+            length = len(postings)
             for i in range(0, length):
-                universe.add(postings[i][0])
+                universe.add(postings[i])
 
         universe = list(universe)
         return universe
@@ -173,12 +178,12 @@ class Searcher:
         costs = []
         for term in terms:
             postings = postings_lists[term][0]
-            costs.append((term, postings.shape[0]))
+            costs.append((term, len(postings)))
 
         costs.sort(key = lambda key: key[1])
 
         # perform pairwise merge
-        result = postings_lists[costs[0][0]][0][:,0]
+        result = postings_lists[costs[0][0]][0]
         for i in range(1, len(costs)):
             term = costs[i][0]
             postings = postings_lists[term][0]
@@ -189,7 +194,7 @@ class Searcher:
 
             while p1 < len1 and p2 < len2:
                 doc1 = result[p1]
-                doc2 = postings[p2][0]
+                doc2 = postings[p2]
 
                 if doc1 == doc2:
                     temp.append(doc1)
@@ -227,11 +232,11 @@ class Searcher:
         for i, token in enumerate(tokens):
             postings_list = postings_lists[token]
             postings = postings_list[0]
-            length = postings.shape[0]
+            length = len(postings)
             for j in range(0, length):
-                docId = postings[j][0]
+                docId = postings[j]
                 if docId in candidate:
-                    positions[docId].append(postings_list[1][j])
+                    positions[docId].append(postings_list[2][j])
 
         # judging every doc
         ans = []
@@ -319,14 +324,14 @@ if __name__ == '__main__':
     terms = ['searcher', 'can', 'token', 'queri', 'string', 'into', 'term', 'and']
     counts = [1, 1, 2, 1, 1, 1, 1, 1]
     postings_lists = {
-        'into'    : (np.array([[0, 1], [1, 5], [3, 6], [5, 1]]), [np.array([5, ])]),
-        'queri'   : (np.array([[0, 5]])                        , [np.array([3, ])]),
-        'can'     : (np.array([[0, 1], [7, 10], [9, 3]])       , [np.array([1, ])]),
-        'term'    : (np.array([[0, 1], [2, 5], [4, 6], [6, 10]]),[np.array([6, ])]),
-        'searcher': (np.array([[0, 1], [8, 3]])                , [np.array([0, ])]),
-        'token'   : (np.array([[0, 1], [1, 7], [4, 6], [7, 3]]), [np.array([2, 8])]),
-        'string'  : (np.array([[0, 1], [2, 5], [5, 6], [8, 1]]), [np.array([4, ])]),
-        'and'     : (np.array([[0, 1], [6, 6], [9, 9]]),         [np.array([7, ])])
+        'into'    : (np.array([0, 1, 3, 5]), np.array([1, 5, 6, 1]), [np.array([5, ])] ),
+        'queri'   : (np.array([0, ])       , np.array([5, ])       , [np.array([3, ])] ),
+        'can'     : (np.array([0, 7, 9])   , np.array([1,10, 3, 1]), [np.array([1, ])] ),
+        'term'    : (np.array([0, 2, 4, 6]), np.array([1, 5, 6,10]), [np.array([6, ])] ),
+        'searcher': (np.array([0, 8])      , np.array([1, 3])      , [np.array([0, ])] ),
+        'token'   : (np.array([0, 1, 4, 7]), np.array([1, 7, 6, 3]), [np.array([2, 8])]),
+        'string'  : (np.array([0, 2, 5, 8]), np.array([1, 5, 6, 1]), [np.array([4, ])] ),
+        'and'     : (np.array([0, 3, 6, 9]), np.array([1, 3, 6, 9]), [np.array([7, ])] )
     }
 
     test = 'search'
