@@ -25,12 +25,13 @@ class Searcher:
     """
 
     def __init__(self, dictionary_file, postings_file,
-                 topK = 10, phrasal = False, pivoted = False):
+                 topK = 10, phrasal = False, pivoted = False, score = False):
         self.dictionary_file = dictionary_file
         self.postings_file = postings_file
         self.topK = topK
         self.phrasal = phrasal
         self.pivoted = pivoted
+        self.score = score
 
         self.stemmer = PorterStemmer()
         self.indexer = Indexer(dictionary_file, postings_file, phrasal, pivoted)
@@ -50,7 +51,6 @@ class Searcher:
 
         # step 2: get the postings lists of the terms
         postings_lists = self.indexer.LoadTerms(terms)
-        print(postings_lists)
 
         # step 3: get the docs that need to rank
         if self.phrasal:
@@ -82,6 +82,7 @@ class Searcher:
 
     Returns:
        result: the list of 10 most relevant docIds in response to the query
+       score: the list of the scores corresponding to the docIds
     """
     def rank(self, terms, counts, doc_list, postings_lists):
         # step 1: initialze the scores
@@ -108,11 +109,18 @@ class Searcher:
             scores[doc] /= self.total_doc[doc]
 
         # step 4: get the topK docs from the heap
-        heap = [(scores[doc], doc) for doc in scores]
-        heap = heapq.nlargest(self.topK, heap)
+        heap = [(scores[doc], -doc) for doc in scores]
+        heap = heapq.nlargest(self.topK, heap, key=lambda x: x)
+
+        result = [-item[1] for item in heap]
+
+        if self.score:
+            score = [item[0] for item in heap]
+        else:
+            score = []
 
         # step 5: return the topK docs
-        return heap
+        return result, score
 
     """ Get the query vector based on the postings_lists
 
