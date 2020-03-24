@@ -50,6 +50,7 @@ class Searcher:
 
         # step 2: get the postings lists of the terms
         postings_lists = self.indexer.LoadTerms(terms)
+        print(postings_lists)
 
         # step 3: get the docs that need to rank
         if self.phrasal:
@@ -318,7 +319,7 @@ class Searcher:
 
 if __name__ == '__main__':
     # Create a Searcher
-    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = False, pivoted = False)
+    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = False)
 
     query = 'Searcher can tokenize query strings into terms and tokens'
     terms = ['searcher', 'can', 'token', 'queri', 'string', 'into', 'term', 'and']

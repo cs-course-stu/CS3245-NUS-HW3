@@ -41,7 +41,7 @@ class Indexer:
 
     """ build index from documents stored in the input directory
 
-    Args: 
+    Args:
         in_dir: working path
     """
 
@@ -174,7 +174,7 @@ class Indexer:
             # np.save(post_file, doc_plus_tf, allow_pickle=True)
             np.save(post_file, doc, allow_pickle=True)
             np.save(post_file, tf, allow_pickle=True)
-            
+
             if(self.phrasal_query):
                 np.save(post_file, position, allow_pickle=True)
 
@@ -231,15 +231,14 @@ class Indexer:
 
                 # load position
                 if(self.phrasal_query):
-                    position = np.load(
-                        self.file_handle, allow_pickle=True).tolist()
+                    position = np.load(self.file_handle, allow_pickle=True)
                     ret[term] = (doc, log_tf, position)
                 else:
                     ret[term] = (doc, log_tf, )
 
             else:
-                doc = np.empty(shape=(0, 1), dtype=np.int32)
-                log_tf = np.empty(shape=(0, 1), dtype=np.float32)
+                doc = np.empty(shape=(0, ), dtype=np.int32)
+                log_tf = np.empty(shape=(0, ), dtype=np.float32)
                 if self.phrasal_query:
                     position = np.empty(shape=(0, ), dtype=object)
                     ret[term] = (doc, log_tf, position)
