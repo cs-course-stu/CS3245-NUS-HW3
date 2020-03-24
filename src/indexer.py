@@ -157,15 +157,24 @@ class Indexer:
             tmp = tmp[tmp[:, 0].argsort()]
             # print(tmp)
 
-            # split the total postings into doc_plus_tf and position list
-            doc_plus_tf = np.array(tmp[:, 0:2], dtype=np.int32)
+            # split the total postings into doc, raw tf and position list
+            # doc_plus_tf = np.array(tmp[:, 0:2], dtype=np.int32)
+            doc = np.array(tmp[:, 0], dtype=np.int32)
+            tf = np.array(tmp[:, 1], dtype=np.float32)
+
+            # convert raw tf into 1+log(tf)
+            for i in range(len(tf)):
+                tf[i] = 1 + \
+                    math.log(tf[i], 10)
+
             if(self.phrasal_query):
                 position = np.array(tmp[:, 2])
-            # print(doc_plus_tf)
-            # print(position)
 
             # save all content to the file
-            np.save(post_file, doc_plus_tf, allow_pickle=True)
+            # np.save(post_file, doc_plus_tf, allow_pickle=True)
+            np.save(post_file, doc, allow_pickle=True)
+            np.save(post_file, tf, allow_pickle=True)
+            
             if(self.phrasal_query):
                 np.save(post_file, position, allow_pickle=True)
 
@@ -216,31 +225,26 @@ class Indexer:
             if term in self.dictionary:
                 self.file_handle.seek(self.dictionary[term])
                 # load postings and position
-                doc_plus_tf = np.load(self.file_handle, allow_pickle=True)
+                #doc_plus_tf = np.load(self.file_handle, allow_pickle=True)
+                doc = np.load(self.file_handle, allow_pickle=True)
+                log_tf = np.load(self.file_handle, allow_pickle=True)
+
+                # load position
                 if(self.phrasal_query):
                     position = np.load(
                         self.file_handle, allow_pickle=True).tolist()
-                    ret[term] = (doc_plus_tf, position)
+                    ret[term] = (doc, log_tf, position)
                 else:
-                    ret[term] = (doc_plus_tf, )
-                # for i in range(len(doc_plus_tf)):
-                #     tmp = position[i]
-                #     print(tmp)
-                    # print(np.array([doc_plus_tf[i], position[i]]).tolist())
-                # print(len(doc_plus_tf))
-                # print(position[0])
-                # print(np.array([doc_plus_tf[0], position[0]]))
+                    ret[term] = (doc, log_tf, )
 
-                # data = np.concatenate([doc_plus_tf, position], axis=1)
-                # postings = np.load(self.file_handle, allow_pickle=True)
-                # pointers = self.skip_pointer_list[len(postings)]
             else:
-                doc_plus_tf = np.empty(shape=(0, 2), dtype=np.int32)
+                doc = np.empty(shape=(0, 1), dtype=np.int32)
+                log_tf = np.empty(shape=(0, 1), dtype=np.float32)
                 if self.phrasal_query:
                     position = np.empty(shape=(0, ), dtype=object)
-                    ret[term] = (doc_plus_tf, position)
+                    ret[term] = (doc, log_tf, position)
                 else:
-                    ret[term] = (doc_plus_tf, )
+                    ret[term] = (doc, log_tf, )
 
         return ret
 
