@@ -145,9 +145,8 @@ class Searcher:
             query_vector[i] = weight
             length += weight * weight
 
-        length = math.sqrt(length)
-
         if length > 0:
+            length = math.sqrt(length)
             for i in range(0, len(terms)):
                 query_vector[i] /= length
 
@@ -312,7 +311,7 @@ class Searcher:
                        for word in nltk.word_tokenize(sent)]
 
         # stem the tokens
-        tokens = [self.stemmer.stem(token).lower() for token in tokens]
+        tokens = [self.stemmer.stem(token.lower()) for token in tokens]
 
         # get the term count
         term_count = defaultdict(lambda: 0)
@@ -364,7 +363,7 @@ if __name__ == '__main__':
         query_vector = searcher._get_query_vector(terms, counts, postings_lists)
         print(query_vector)
     elif test == 'search':
-        result = searcher.search('U.S. president')
+        result = searcher.search('world news')
         print(result)
     elif test == '_judge':
         terms.append('token')

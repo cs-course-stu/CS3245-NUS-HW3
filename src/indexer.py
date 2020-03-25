@@ -72,7 +72,7 @@ class Indexer:
 
                     for token in tokens:
                         # stemmer.lower
-                        clean_token = porter_stemmer.stem(token).lower()
+                        clean_token = porter_stemmer.stem(token.lower())
 
                         if clean_token in self.dictionary:  # term exists
                             if clean_token in doc_set:
