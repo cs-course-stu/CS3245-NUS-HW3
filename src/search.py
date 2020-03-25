@@ -8,6 +8,7 @@ from searcher import Searcher
 
 # global variable
 topK = 10
+rate = 0.01
 phrasal = False  # operate phrase query
 pivoted = False  # operate normalize according to the length of doc
 score = False    # print docid with its score
@@ -20,11 +21,13 @@ def usage():
           "  -q  queries file path\n"
           "  -o  search results file path\n"
           "  -t  number of the results returned by each query\n"
+          "  -r  penalty rate of the pivoted normalized document length\n"
           "  -x  enable phrasal query\n"
           "  -n  enable using pivoted normalized document length\n"
           "  -s  enable printing score\n")
 
-def run_search(dict_file, postings_file, queries_file, results_file, topK, phrasal, pivoted, score):
+def run_search(dict_file, postings_file, queries_file, results_file,
+               topK, rate, phrasal, pivoted, score):
     """
     using the given dictionary file and postings file,
     perform searching on the given queries file and output the results to a file
@@ -32,7 +35,7 @@ def run_search(dict_file, postings_file, queries_file, results_file, topK, phras
     print('running search on the queries...')
     # This is an empty method
     # Pls implement your code in below
-    searcher = Searcher(dict_file, postings_file, topK = topK, phrasal=phrasal, pivoted=pivoted, score=score)
+    searcher = Searcher(dict_file, postings_file, topK = topK, rate=rate, phrasal=phrasal, pivoted=pivoted, score=score)
 
     first_line = True
     with open(queries_file, 'r') as fin, \
@@ -56,7 +59,7 @@ def run_search(dict_file, postings_file, queries_file, results_file, topK, phras
 dictionary_file = postings_file = file_of_queries = output_file_of_results = None
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'd:p:q:o:t:xns')
+    opts, args = getopt.getopt(sys.argv[1:], 'd:p:q:o:t:r:xns')
 except getopt.GetoptError:
     usage()
     sys.exit(2)
@@ -70,12 +73,14 @@ for o, a in opts:
         file_of_queries = a
     elif o == '-o':
         file_of_output = a
-    elif 0 == '-t':
+    elif o == '-t':
         topK = int(a)
+    elif o == '-r':
+        rate = float(a)
     elif o == '-x':  # operate phrase query
         phrasal = True
     elif o == '-n':  # operate normalize according to the length of doc
-        normalize = True
+        pivoted = True
     elif o == '-s':
         score = True
     else:
@@ -85,4 +90,5 @@ if dictionary_file == None or postings_file == None or file_of_queries == None o
     usage()
     sys.exit(2)
 
-run_search(dictionary_file, postings_file, file_of_queries, file_of_output, topK,  phrasal, pivoted, score)
+run_search(dictionary_file, postings_file, file_of_queries, file_of_output,
+           topK, rate,  phrasal, pivoted, score)

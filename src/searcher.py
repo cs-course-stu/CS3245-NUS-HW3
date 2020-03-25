@@ -20,15 +20,17 @@ class Searcher:
         dictionary_file: the file path of the dictionary
         postings_file: the file path of the postings
         topK: the number of highest-scoring documents to be returned
+        rate: the penalty rate of the pivoted normalized document length
         phrasal: boolean indicator for dealing queries as phrasal queries
         pivoted: boolean indicator for using pivoted normalized document length
     """
 
     def __init__(self, dictionary_file, postings_file,
-                 topK = 10, phrasal = False, pivoted = False, score = False):
+                 topK = 10, rate = 0.01, phrasal = False, pivoted = False, score = False):
         self.dictionary_file = dictionary_file
         self.postings_file = postings_file
         self.topK = topK
+        self.rate = rate
         self.phrasal = phrasal
         self.pivoted = pivoted
         self.score = score
@@ -105,7 +107,12 @@ class Searcher:
                 scores[doc] += weight * query_vector[i]
 
         for doc in scores:
-            scores[doc] /= self.total_doc[doc]
+            length = self.total_doc[doc]
+            if self.pivoted:
+                piv = 1 - self.rate + self.rate * length / self.average
+                scores[doc] /= length * piv
+            else:
+                scores[doc] /= length
 
         # step 4: get the topK docs from the heap
         heap = [(scores[doc], -doc) for doc in scores]
