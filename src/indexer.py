@@ -251,8 +251,8 @@ class Indexer:
 if __name__ == '__main__':
     indexer = Indexer(
         'dictionary.txt', 'postings.txt', phrasal_query=True, normalize=True)
-    #indexer.build_index('../../reuters/training')
-    # start = time.time()
+    indexer.build_index('../../reuters/training')
+    start = time.time()
     indexer.build_index(
         '/Users/wangyifan/Google Drive/reuters/training')
     indexer.SavetoFile()

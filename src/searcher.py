@@ -52,6 +52,8 @@ class Searcher:
         # step 2: get the postings lists of the terms
         postings_lists = self.indexer.LoadTerms(terms)
 
+        np.set_printoptions(threshold=np.inf)
+
         # step 3: get the docs that need to rank
         if self.phrasal:
             # phrasal query
@@ -60,7 +62,6 @@ class Searcher:
 
             # step 3-2: judging every doc whether it contains the phrase
             candidate = self._judge(candidate, tokens, postings_lists)
-            pass
         else:
             # text query
             candidate = []
@@ -133,14 +134,14 @@ class Searcher:
         query_vector: the query vector based on VSM
     """
     def _get_query_vector(self, terms, counts, postings_lists):
-        total_num = len(self.total_doc)
+        N = len(self.total_doc) + 1
         query_vector = np.zeros(len(terms))
 
         length = 0
         for i, term in enumerate(terms):
             tf = 1 + math.log(counts[i])
             df = len(postings_lists[term][0])
-            idf = math.log(total_num / df) if df else 0
+            idf = math.log(N / df) if df else 0
             weight = tf * idf
 
             query_vector[i] = weight
@@ -148,8 +149,9 @@ class Searcher:
 
         length = math.sqrt(length)
 
-        for i in range(0, len(terms)):
-            query_vector[i] /= length
+        if length > 0:
+            for i in range(0, len(terms)):
+                query_vector[i] /= length
 
         return query_vector
 
@@ -183,6 +185,9 @@ class Searcher:
         intersection: the intersection of postings lists
     """
     def _get_intersection(self, terms, postings_lists):
+        if len(terms) == 0:
+            return []
+
         # optimize the order of the merge
         costs = []
         for term in terms:
@@ -327,7 +332,7 @@ class Searcher:
 
 if __name__ == '__main__':
     # Create a Searcher
-    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = False)
+    searcher = Searcher('dictionary.txt', 'postings.txt', phrasal = True, pivoted = True)
 
     query = 'Searcher can tokenize query strings into terms and tokens'
     terms = ['searcher', 'can', 'token', 'queri', 'string', 'into', 'term', 'and']
@@ -361,7 +366,7 @@ if __name__ == '__main__':
         query_vector = searcher._get_query_vector(terms, counts, postings_lists)
         print(query_vector)
     elif test == 'search':
-        result = searcher.search('share in quarter and')
+        result = searcher.search('U.S. president')
         print(result)
     elif test == '_judge':
         terms.append('token')
