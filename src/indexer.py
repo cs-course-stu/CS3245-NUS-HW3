@@ -62,11 +62,13 @@ class Indexer:
                 doc_set = set()
                 term_pos = 0
                 self.total_doc[doc_id] = 0
-                f = open(in_dir+"/"+file)
-                for line in iter(f):
+
+                with open(in_dir + '/' + file) as f:
+                    content = f.read().replace('\n', ' ').replace('\r', '')
+
                     # tokenize
                     tokens = [word for sent in nltk.sent_tokenize(
-                        line) for word in nltk.word_tokenize(sent)]
+                        content) for word in nltk.word_tokenize(sent)]
 
                     for token in tokens:
                         # stemmer.lower

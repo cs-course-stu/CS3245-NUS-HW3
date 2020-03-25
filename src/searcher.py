@@ -52,8 +52,6 @@ class Searcher:
         # step 2: get the postings lists of the terms
         postings_lists = self.indexer.LoadTerms(terms)
 
-        np.set_printoptions(threshold=np.inf)
-
         # step 3: get the docs that need to rank
         if self.phrasal:
             # phrasal query
