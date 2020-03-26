@@ -45,7 +45,7 @@ class Searcher:
         query: the query string
 
     Returns:
-        result: the list of 10 most relevant docIds in response to the query
+        result: the list of K most relevant docIds in response to the query
     """
     def search(self, query):
         # step 1: tokenize the query to get all the terms
@@ -66,13 +66,13 @@ class Searcher:
             # text query
             candidate = []
 
-        # step 4: pass the condidate docs to the rank function get the result
+        # step 4: pass the candidate docs to the rank function get the result
         result = self.rank(terms, counts, candidate, postings_lists)
 
         # step 5: return the result
         return result
 
-    """ Rank the documents and return the 10 most relevant docIds.
+    """ Rank the documents and return the K most relevant docIds.
         The result should be in the order of relevant.
 
     Args:
@@ -82,7 +82,7 @@ class Searcher:
         postings_lists: the dictionary with terms to posting lists mapping
 
     Returns:
-       result: the list of 10 most relevant docIds in response to the query
+       result: the list of K most relevant docIds in response to the query
        score: the list of the scores corresponding to the docIds
     """
     def rank(self, terms, counts, doc_list, postings_lists):
