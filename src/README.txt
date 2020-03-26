@@ -85,6 +85,9 @@ and formatted correctly.
 * search.py: The file in this assignment using Seacher to get the top K documents.
 * README.txt: This file contains this sentence gives an overview of this assignment.
 * ESSAY.txt: This file contains essay questions mentioned on HW#3
+* dictionary.txt: This file generated from index.py, which contains info of total_doc and terms.
+* postings.txt: This file generated from index.py, which contains doc_id, tf and position of each term.
+
 
 == Statement of individual work ==
 
