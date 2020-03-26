@@ -28,12 +28,7 @@ class Indexer:
         self.dictionary = {}
         self.skip_pointer_list = []
         self.postings = {}
-        """
-        non-position (non -x):
-        test1 = {"term": [[1,2],[5,6]]}
-        position (-x):
-        test1 = {"term": [[1,2,[3,4]],[5,6,[7,8]]]}
-        """
+
         self.file_handle = None
         self.average = 0
         self.phrasal_query = phrasal_query
@@ -55,8 +50,6 @@ class Indexer:
         porter_stemmer = PorterStemmer()
 
         for i, file in enumerate(files):
-            # if i > 100:
-            #     break
             if not os.path.isdir(file):
                 doc_id = int(file)
                 doc_set = set()
@@ -105,6 +98,7 @@ class Indexer:
                                 self.postings[clean_token] = [
                                     [doc_id, 1]]  # {"term": [[1,2],[5,6]]}
                         term_pos += 1
+
                 # accumulate the length of doc
                 if(self.normalize):
                     self.average += term_pos
@@ -120,7 +114,7 @@ class Indexer:
                 # sqart the length and assign it to doc
                 self.total_doc[doc_id] = np.sqrt(length)
 
-        # calculate the average length of doc
+        # calculate the average length of totoal doc
         if(self.normalize):
             self.average /= (i+1)
 
@@ -148,40 +142,30 @@ class Indexer:
 
             # operate each postings
             for i in range(len(tmp)):
-                # convert tf to 1 + log() format
-                # tmp[i][1] = 1 + \
-                #     math.log(tmp[i][1], 10)
-
                 # convert position list to the np.array
                 if(self.phrasal_query):
                     tmp[i][2] = np.array(tmp[i][2])
 
             # sort the posting list according to he doc_id
             tmp = tmp[tmp[:, 0].argsort()]
-            # print(tmp)
 
             # split the total postings into doc, raw tf and position list
-            # doc_plus_tf = np.array(tmp[:, 0:2], dtype=np.int32)
             doc = np.array(tmp[:, 0], dtype=np.int32)
             tf = np.array(tmp[:, 1], dtype=np.float32)
 
-            # convert raw tf into 1+log(tf)
-            # for i in range(len(tf)):
-            #     tf[i] = 1 + \
-            #         math.log(tf[i], 10)
-
+            # operate the position
             if(self.phrasal_query):
                 position = np.array(tmp[:, 2])
 
             # save all content to the file
-            # np.save(post_file, doc_plus_tf, allow_pickle=True)
             np.save(post_file, doc, allow_pickle=True)
             np.save(post_file, tf, allow_pickle=True)
 
+            # save the position
             if(self.phrasal_query):
                 np.save(post_file, position, allow_pickle=True)
 
-        # save average length of doc to the file 0 means null
+        # save average length of doc to the file
         pickle.dump(self.average, dict_file)
 
         # save total_doc and dictionary
@@ -205,8 +189,6 @@ class Indexer:
             self.total_doc = pickle.load(f)
             self.dictionary = pickle.load(f)
 
-        self.file_hande = open(self.postings_file, 'rb')
-
         print('load dictionary successfully!')
         return self.average, self.total_doc, self.dictionary
 
@@ -228,7 +210,6 @@ class Indexer:
             if term in self.dictionary:
                 self.file_handle.seek(self.dictionary[term])
                 # load postings and position
-                #doc_plus_tf = np.load(self.file_handle, allow_pickle=True)
                 doc = np.load(self.file_handle, allow_pickle=True)
                 log_tf = np.load(self.file_handle, allow_pickle=True)
 

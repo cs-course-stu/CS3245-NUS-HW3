@@ -19,11 +19,11 @@ def build_index(in_dir, out_dict, out_postings, phrasal_query, normalize):
     then output the dictionary file and postings file
     """
     # initialize the class
-    inverted_index = Indexer(out_dict, out_postings, phrasal_query, normalize)
-    inverted_index.build_index(in_dir)
+    indexer = Indexer(out_dict, out_postings, phrasal_query, normalize)
+    indexer.build_index(in_dir)
 
     # save to file
-    inverted_index.SavetoFile()
+    indexer.SavetoFile()
 
 input_directory = output_file_dictionary = output_file_postings = None
 
